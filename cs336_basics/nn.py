@@ -39,3 +39,24 @@ class RMSNorm(nn.Module):
         rms = torch.sqrt(x.pow(2).mean(dim=-1, keepdim=True) + self.eps)
         result = x/rms * self.weight
         return result.to(in_dtype)
+
+class SiLU(nn.Module):
+    def __init__(self):
+        super().__init__()
+    def forward(self, x):
+        return x * torch.sigmoid(x)
+
+class SwiGLU(nn.Module):
+    def __init__(self, d_model, d_ff, device=None, dtype=None):
+        super().__init__()
+        self.w1 = Linear(d_model, d_ff, device=device, dtype=dtype)
+        self.w3 = Linear(d_model, d_ff, device=device, dtype=dtype)
+        self.w2 = Linear(d_ff, d_model, device=device, dtype=dtype)
+
+    def forward(self, x):
+        # compute w1 and then silu to get signal
+        # compute w3 to get gate
+        # multiply signal and gate to get w2
+        signal = SiLU()(self.w1(x))
+        gate = self.w3(x)
+        return self.w2(signal * gate)
